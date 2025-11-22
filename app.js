@@ -48,6 +48,7 @@ const botsInput = document.getElementById('botsInput')
 const uploadList = document.getElementById('uploadList')
 const botsListEl = document.getElementById('botsList')
 const checkBtn = document.getElementById('checkBtn')
+const clearListBtn = document.getElementById('clearListBtn')
 const myBotsBtn = document.getElementById('myBotsBtn')
 const myBotsPanel = document.getElementById('myBotsPanel')
 const closeMyBots = document.getElementById('closeMyBots')
@@ -100,6 +101,7 @@ const allBotsRef = ref(db,'/bots')
 let botsData = {}
 let userListKeys = []
 let userListRef = null
+let visualCleared = false
 
 async function startRealtime() {
   await waitForUser()
@@ -130,6 +132,7 @@ startRealtime()
 
 function renderUserBots(){
   // Render only bots that current user uploaded (userListKeys)
+  if(visualCleared){ botsListEl.innerHTML='(пусто)'; return }
   if(!userListKeys || userListKeys.length===0){ botsListEl.innerHTML='(пусто)'; return }
   botsListEl.innerHTML = ''
   for(const key of userListKeys){
@@ -200,3 +203,12 @@ checkBtn.addEventListener('click', async ()=>{
 // My bots panel
 myBotsBtn.addEventListener('click', ()=>{ myBotsPanel.classList.remove('hidden') })
 closeMyBots.addEventListener('click', ()=>{ myBotsPanel.classList.add('hidden') })
+
+// Clear (visual) right column
+if (typeof clearListBtn !== 'undefined' && clearListBtn) {
+  clearListBtn.addEventListener('click', ()=>{
+    visualCleared = !visualCleared
+    clearListBtn.textContent = visualCleared ? 'Восстановить' : 'Очистить'
+    renderUserBots()
+  })
+}
