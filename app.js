@@ -83,34 +83,57 @@ uploadList.addEventListener('click', async ()=>{
         return
       }
     }
+    // record this bot under the current user's uploaded list
+    try{
+      if(currentUser.uid){
+        await set(ref(db,`/users/${currentUser.uid}/lists/${key}`), true)
+      }
+    }catch(e){
+      console.error('Failed to write user list entry', e)
+    }
   }
   alert('Список загружен. Нажмите "Проверить" для проверки статусов.')
 })
 
 // We'll initialize realtime listeners after auth (so anonymous uid is available for rendering)
 const allBotsRef = ref(db,'/bots')
+let botsData = {}
+let userListKeys = []
+let userListRef = null
 
 async function startRealtime() {
   await waitForUser()
+  // subscribe to global bots
   onValue(allBotsRef, snapshot=>{
-    const data = snapshot.val() || {}
-    renderBots(data)
-    renderMyBots(data)
+    botsData = snapshot.val() || {}
+    renderUserBots()
+    renderMyBots(botsData)
   }, err=>{
     console.error('onValue error', err)
     if(String(err).toLowerCase().includes('permission')){
       alert('Ошибка доступа к Firebase при подписке на /bots: проверьте правила Realtime Database (см. README).')
     }
   })
+
+  // subscribe to current user's uploaded list
+  userListRef = ref(db,`/users/${currentUser.uid}/lists`)
+  onValue(userListRef, snap=>{
+    const val = snap.val() || {}
+    userListKeys = Object.keys(val)
+    renderUserBots()
+  }, err=>{
+    console.error('onValue user lists error', err)
+  })
 }
 
 startRealtime()
 
-function renderBots(data){
-  const arr = Object.entries(data)
-  if(arr.length===0){ botsListEl.innerHTML='(пусто)'; return }
+function renderUserBots(){
+  // Render only bots that current user uploaded (userListKeys)
+  if(!userListKeys || userListKeys.length===0){ botsListEl.innerHTML='(пусто)'; return }
   botsListEl.innerHTML = ''
-  for(const [key, bot] of arr){
+  for(const key of userListKeys){
+    const bot = botsData[key] || { name: decodeURIComponent(key) }
     const div = document.createElement('div')
     div.className = 'bot-item'
     const name = document.createElement('div')
@@ -142,11 +165,14 @@ function renderMyBots(data){
 checkBtn.addEventListener('click', async ()=>{
   await waitForUser()
   try{
-    const snap = await get(allBotsRef)
-    const snapshotData = snap.val() || {}
-    const entries = Object.entries(snapshotData)
-    if(entries.length===0){ alert('Список ботов пуст. Сначала загрузите список.'); return }
-    for(const [key, bot] of entries){
+    // Only check bots from the current user's uploaded list
+    if(!currentUser.uid){ alert('Не удалось получить UID пользователя. Проверьте аутентификацию.'); return }
+    const userListSnap = await get(ref(db,`/users/${currentUser.uid}/lists`))
+    const userList = userListSnap.val() || {}
+    const keys = Object.keys(userList)
+    if(keys.length===0){ alert('Ваш список ботов пуст. Сначала загрузите список.'); return }
+    for(const key of keys){
+      const bot = botsData[key] || {}
       const botRef = ref(db,`/bots/${key}`)
       try{
         await runTransaction(botRef, cur=>{
