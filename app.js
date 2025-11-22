@@ -33,14 +33,13 @@ let currentUser = { uid: null }
 signInAnonymously(auth).catch((e)=>console.error('auth err',e))
 onAuthStateChanged(auth,user=>{ if(user){ currentUser.uid = user.uid; console.log('uid',user.uid) } })
 
-function waitForUser() {
+function waitForUser(timeout = 5000) {
   return new Promise((resolve) => {
     if (currentUser.uid) return resolve(currentUser)
     const unsub = onAuthStateChanged(auth, user => {
       if (user) { currentUser.uid = user.uid; unsub(); return resolve(currentUser) }
     })
-    // NOTE: we do not fallback with timeout here to avoid inconsistent state: 
-    // this waits until auth returns. Ensure Anonymous Auth is enabled in Firebase.
+    setTimeout(() => resolve(currentUser), timeout)
   })
 }
 
@@ -71,15 +70,14 @@ uploadList.addEventListener('click', async ()=>{
   for(const name of lines){
     const key = keyFromName(name)
     const botRef = ref(db,`/bots/${key}`)
-    // create basic entry if not exists and immediately claim if it's free
+    // create basic entry if not exists
     try{
       await runTransaction(botRef, cur=>{
-        if(cur===null) return { name, createdAt: Date.now(), ownerId: currentUser.uid || null, claimedAt: currentUser.uid ? Date.now() : null }
-        if(!cur.ownerId && currentUser.uid){ cur.ownerId = currentUser.uid; cur.claimedAt = Date.now() }
+        if(cur===null) return { name, createdAt: Date.now() }
         return cur
       })
     }catch(e){
-      console.error('Failed to create/claim bot', e)
+      console.error('Failed to create bot', e)
       if(String(e).toLowerCase().includes('permission')){
         alert('Ошибка доступа к Firebase: проверьте правила Realtime Database и включите Anonymous Auth или откройте правила для теста (см. README).')
         return
