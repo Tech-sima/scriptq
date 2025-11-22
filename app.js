@@ -14,13 +14,13 @@ import { getDatabase, ref, onValue, set, update, runTransaction } from 'https://
   }
 */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCRN1rMd6XXPHnyhbZ69gb8MprBId_Hn1Q",
+  authDomain: "scripdq.firebaseapp.com",
+  databaseURL: "https://scripdq-default-rtdb.firebaseio.com",
+  projectId: "scripdq",
+  storageBucket: "scripdq.firebasestorage.app",
+  messagingSenderId: "881267589716",
+  appId: "1:881267589716:web:8d45b390d03a76abeb23c1"
 }
 
 const app = initializeApp(firebaseConfig)
