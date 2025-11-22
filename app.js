@@ -1,7 +1,7 @@
 // Простой frontend с Firebase Realtime Database (модульный импорт)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js'
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js'
-import { getDatabase, ref, onValue, set, update, runTransaction, get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js'
+import { getDatabase, ref, onValue, get, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js'
 
 /*
   ВАЖНО: Замените конфиг на ваш Firebase проект.
@@ -33,13 +33,13 @@ let currentUser = { uid: null }
 signInAnonymously(auth).catch((e)=>console.error('auth err',e))
 onAuthStateChanged(auth,user=>{ if(user){ currentUser.uid = user.uid; console.log('uid',user.uid) } })
 
-// wait until auth assigned
-function waitForUser(){
-  if(currentUser.uid) return Promise.resolve(currentUser)
-  return new Promise(res=>{
-    const unsub = onAuthStateChanged(auth,user=>{
-      if(user){ currentUser.uid = user.uid; unsub(); res(currentUser) }
+function waitForUser(timeout = 5000) {
+  return new Promise((resolve) => {
+    if (currentUser.uid) return resolve(currentUser)
+    const unsub = onAuthStateChanged(auth, user => {
+      if (user) { currentUser.uid = user.uid; unsub(); return resolve(currentUser) }
     })
+    setTimeout(() => resolve(currentUser), timeout)
   })
 }
 
@@ -62,27 +62,49 @@ function keyFromName(name){
 uploadList.addEventListener('click', async ()=>{
   const lines = botsInput.value.split('\n').map(l=>l.trim()).filter(Boolean)
   if(lines.length===0){ alert('Вставьте хотя бы один бот'); return }
+  await waitForUser()
+  if(!currentUser.uid){
+    // user not authenticated yet — warn but still try (DB rules may allow unauthenticated writes)
+    console.warn('UID not available yet; anonymous auth may be disabled in Firebase console')
+  }
   for(const name of lines){
     const key = keyFromName(name)
     const botRef = ref(db,`/bots/${key}`)
     // create basic entry if not exists
-    await runTransaction(botRef, cur=>{
-      if(cur===null) return { name, createdAt: Date.now() }
-      return cur
-    })
+    try{
+      await runTransaction(botRef, cur=>{
+        if(cur===null) return { name, createdAt: Date.now() }
+        return cur
+      })
+    }catch(e){
+      console.error('Failed to create bot', e)
+      if(String(e).toLowerCase().includes('permission')){
+        alert('Ошибка доступа к Firebase: проверьте правила Realtime Database и включите Anonymous Auth или откройте правила для теста (см. README).')
+        return
+      }
+    }
   }
-  console.log('uploaded', lines.length)
   alert('Список загружен. Нажмите "Проверить" для проверки статусов.')
 })
 
-// Real-time listener: render bots on change
+// We'll initialize realtime listeners after auth (so anonymous uid is available for rendering)
 const allBotsRef = ref(db,'/bots')
-onValue(allBotsRef, snapshot=>{
-  const data = snapshot.val() || {}
-  console.log('onValue /bots update, count=', Object.keys(data).length)
-  renderBots(data)
-  renderMyBots(data)
-})
+
+async function startRealtime() {
+  await waitForUser()
+  onValue(allBotsRef, snapshot=>{
+    const data = snapshot.val() || {}
+    renderBots(data)
+    renderMyBots(data)
+  }, err=>{
+    console.error('onValue error', err)
+    if(String(err).toLowerCase().includes('permission')){
+      alert('Ошибка доступа к Firebase при подписке на /bots: проверьте правила Realtime Database (см. README).')
+    }
+  })
+}
+
+startRealtime()
 
 function renderBots(data){
   const arr = Object.entries(data)
@@ -118,9 +140,7 @@ function renderMyBots(data){
 
 // When user clicks 'Проверить', check all bots; unclaimed bots will be automatically присвоены текущему пользователю
 checkBtn.addEventListener('click', async ()=>{
-  console.log('Проверка: старт')
   await waitForUser()
-  // read snapshot once using get()
   try{
     const snap = await get(allBotsRef)
     const snapshotData = snap.val() || {}
@@ -134,12 +154,20 @@ checkBtn.addEventListener('click', async ()=>{
           if(!cur.ownerId){ cur.ownerId = currentUser.uid; cur.claimedAt = Date.now(); return cur }
           return cur
         })
-      }catch(e){ console.warn('tx failed',e) }
+      }catch(e){
+        console.warn('tx failed',e)
+        if(String(e).toLowerCase().includes('permission')){
+          alert('Ошибка доступа при попытке присвоить бота: проверьте правила Realtime Database и права на запись.')
+          return
+        }
+      }
     }
     alert('Проверка завершена — статусы обновлены.')
   }catch(e){
-    console.error('Ошибка получения списка ботов', e)
-    alert('Не удалось получить список ботов. Проверьте подключение к Firebase и правила безопасности.')
+    console.error('Failed to get bots', e)
+    if(String(e).toLowerCase().includes('permission')){
+      alert('Ошибка доступа к Firebase: проверьте правила Realtime Database (см. README).')
+    }
   }
 })
 
