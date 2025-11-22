@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bot Checker — Черно-голубой</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>Bot Checker</h1>
+    <div class="header-actions">
+      <button id="myBotsBtn">Мои боты</button>
+      <button id="checkBtn" class="primary">Проверить</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="column left">
+      <h2>Вставьте список юзер-ботов (по одному на строку)</h2>
+      <textarea id="botsInput" placeholder="bot1\nbot2\nbot3"></textarea>
+      <div class="controls">
+        <button id="uploadList">Загрузить список</button>
+        <small class="hint">После загрузки нажмите "Проверить" в правой колонке</small>
+      </div>
+    </section>
+
+    <section class="column right">
+      <h2>Список ботов</h2>
+      <div id="botsList" class="bots-list">(пусто)</div>
+    </section>
+  </main>
+
+  <aside id="myBotsPanel" class="panel hidden">
+    <div class="panel-header">
+      <h3>Мои боты</h3>
+      <button id="closeMyBots">Закрыть</button>
+    </div>
+    <div id="myBotsList" class="bots-list"></div>
+  </aside>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
