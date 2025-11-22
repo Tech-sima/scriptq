@@ -101,7 +101,8 @@ const allBotsRef = ref(db,'/bots')
 let botsData = {}
 let userListKeys = []
 let userListRef = null
-let visualCleared = false
+// Set of keys hidden by the user via "Очистить" — hides current items but keeps them in DB
+let hiddenKeys = new Set()
 
 async function startRealtime() {
   await waitForUser()
@@ -132,10 +133,10 @@ startRealtime()
 
 function renderUserBots(){
   // Render only bots that current user uploaded (userListKeys)
-  if(visualCleared){ botsListEl.innerHTML='(пусто)'; return }
   if(!userListKeys || userListKeys.length===0){ botsListEl.innerHTML='(пусто)'; return }
   botsListEl.innerHTML = ''
   for(const key of userListKeys){
+    if(hiddenKeys.has(key)) continue // skip visually cleared items
     const bot = botsData[key] || { name: decodeURIComponent(key) }
     const div = document.createElement('div')
     div.className = 'bot-item'
@@ -204,11 +205,18 @@ checkBtn.addEventListener('click', async ()=>{
 myBotsBtn.addEventListener('click', ()=>{ myBotsPanel.classList.remove('hidden') })
 closeMyBots.addEventListener('click', ()=>{ myBotsPanel.classList.add('hidden') })
 
-// Clear (visual) right column
+// Clear (visual) right column: hide current uploaded keys; new uploads appear normally
 if (typeof clearListBtn !== 'undefined' && clearListBtn) {
   clearListBtn.addEventListener('click', ()=>{
-    visualCleared = !visualCleared
-    clearListBtn.textContent = visualCleared ? 'Восстановить' : 'Очистить'
+    if(userListKeys && userListKeys.length>0 && hiddenKeys.size===0){
+      // hide current items
+      hiddenKeys = new Set(userListKeys)
+      clearListBtn.textContent = 'Восстановить'
+    }else{
+      // restore
+      hiddenKeys.clear()
+      clearListBtn.textContent = 'Очистить'
+    }
     renderUserBots()
   })
 }

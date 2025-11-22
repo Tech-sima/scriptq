@@ -30,6 +30,10 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial;background:linea
 .bots-list::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track{
   background:transparent
 }
+/* My bots panel scroll */
+#myBotsList{max-height:50vh;overflow:auto;padding-right:6px}
+#myBotsList::-webkit-scrollbar{width:10px}
+#myBotsList::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(0,150,255,.12),rgba(0,120,200,.08));border-radius:8px}
 button{background:transparent;color:var(--text);border:1px solid rgba(0,150,255,.12);padding:8px 12px;border-radius:6px;cursor:pointer}
 button.primary{background:linear-gradient(90deg,var(--accent),#0088dd);border:none;color:#001}
 .hint{color:var(--muted);font-size:12px}
