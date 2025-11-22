@@ -11,14 +11,21 @@ html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial;background:linea
 .header h1{margin:0;font-size:18px;color:var(--accent)}
 .header-actions button{margin-left:10px}
 .container{display:flex;gap:20px;padding:24px}
-.column{flex:1;padding:18px;border-radius:8px;background:linear-gradient(180deg,var(--panel),#031022);min-height:60vh;border:1px solid rgba(0,150,255,.06)}
+.column{flex:1;padding:18px;border-radius:8px;background:linear-gradient(180deg,var(--panel),#031022);min-height:60vh;border:1px solid rgba(0,150,255,.06);overflow:auto}
 .left h2,.right h2{margin-top:0;color:var(--muted)}
 textarea{width:100%;height:300px;padding:12px;background:#000511;border:1px solid rgba(0,150,255,.06);color:var(--text);resize:vertical}
 .controls{display:flex;align-items:center;gap:12px;margin-top:12px}
 button{background:transparent;color:var(--text);border:1px solid rgba(0,150,255,.12);padding:8px 12px;border-radius:6px;cursor:pointer}
 button.primary{background:linear-gradient(90deg,var(--accent),#0088dd);border:none;color:#001}
 .hint{color:var(--muted);font-size:12px}
-.bots-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.bots-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow:auto;padding-right:6px}
+.column textarea{max-height:60vh}
+
+/* Custom scrollbar for modern browsers */
+.bots-list::-webkit-scrollbar, .column::-webkit-scrollbar { width:10px }
+.bots-list::-webkit-scrollbar-track, .column::-webkit-scrollbar-track { background:rgba(0,0,0,.12); border-radius:6px }
+.bots-list::-webkit-scrollbar-thumb, .column::-webkit-scrollbar-thumb { background:rgba(0,166,255,.18); border-radius:6px }
+.bots-list::-webkit-scrollbar-thumb:hover, .column::-webkit-scrollbar-thumb:hover { background:rgba(0,166,255,.26) }
 .bot-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid rgba(0,150,255,.03)}
 .badge{padding:4px 8px;border-radius:12px;font-size:13px}
 .badge.free{background:rgba(0,166,255,.12);color:var(--accent);}
