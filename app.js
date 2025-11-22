@@ -1,7 +1,7 @@
 // Простой frontend с Firebase Realtime Database (модульный импорт)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js'
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js'
-import { getDatabase, ref, onValue, set, update, runTransaction } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js'
+import { getDatabase, ref, onValue, set, update, runTransaction, get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js'
 
 /*
   ВАЖНО: Замените конфиг на ваш Firebase проект.
@@ -14,13 +14,13 @@ import { getDatabase, ref, onValue, set, update, runTransaction } from 'https://
   }
 */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCRN1rMd6XXPHnyhbZ69gb8MprBId_Hn1Q",
+  authDomain: "scripdq.firebaseapp.com",
+  databaseURL: "https://scripdq-default-rtdb.firebaseio.com",
+  projectId: "scripdq",
+  storageBucket: "scripdq.firebasestorage.app",
+  messagingSenderId: "881267589716",
+  appId: "1:881267589716:web:8d45b390d03a76abeb23c1"
 }
 
 const app = initializeApp(firebaseConfig)
@@ -32,6 +32,16 @@ let currentUser = { uid: null }
 // Anonymous sign-in
 signInAnonymously(auth).catch((e)=>console.error('auth err',e))
 onAuthStateChanged(auth,user=>{ if(user){ currentUser.uid = user.uid; console.log('uid',user.uid) } })
+
+// wait until auth assigned
+function waitForUser(){
+  if(currentUser.uid) return Promise.resolve(currentUser)
+  return new Promise(res=>{
+    const unsub = onAuthStateChanged(auth,user=>{
+      if(user){ currentUser.uid = user.uid; unsub(); res(currentUser) }
+    })
+  })
+}
 
 // DOM
 const botsInput = document.getElementById('botsInput')
@@ -61,6 +71,7 @@ uploadList.addEventListener('click', async ()=>{
       return cur
     })
   }
+  console.log('uploaded', lines.length)
   alert('Список загружен. Нажмите "Проверить" для проверки статусов.')
 })
 
@@ -68,6 +79,7 @@ uploadList.addEventListener('click', async ()=>{
 const allBotsRef = ref(db,'/bots')
 onValue(allBotsRef, snapshot=>{
   const data = snapshot.val() || {}
+  console.log('onValue /bots update, count=', Object.keys(data).length)
   renderBots(data)
   renderMyBots(data)
 })
@@ -106,23 +118,29 @@ function renderMyBots(data){
 
 // When user clicks 'Проверить', check all bots; unclaimed bots will be automatically присвоены текущему пользователю
 checkBtn.addEventListener('click', async ()=>{
-  // read snapshot once
-  const snapshot = (await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js')).get(ref(db,'/bots'))
-  // For simplicity, we will iterate current client-local view (onValue keeps it up-to-date)
-  const snapshotData = (await new Promise(res=>{ onValue(allBotsRef, s=>{ res(s.val()||{}); }, { onlyOnce:true }) }))
-  const entries = Object.entries(snapshotData)
-  if(entries.length===0){ alert('Список ботов пуст. Сначала загрузите список.'); return }
-  for(const [key, bot] of entries){
-    const botRef = ref(db,`/bots/${key}`)
-    try{
-      await runTransaction(botRef, cur=>{
-        if(cur===null) return { name: bot.name || decodeURIComponent(key), ownerId: currentUser.uid, claimedAt: Date.now() }
-        if(!cur.ownerId){ cur.ownerId = currentUser.uid; cur.claimedAt = Date.now(); return cur }
-        return cur
-      })
-    }catch(e){ console.warn('tx failed',e) }
+  console.log('Проверка: старт')
+  await waitForUser()
+  // read snapshot once using get()
+  try{
+    const snap = await get(allBotsRef)
+    const snapshotData = snap.val() || {}
+    const entries = Object.entries(snapshotData)
+    if(entries.length===0){ alert('Список ботов пуст. Сначала загрузите список.'); return }
+    for(const [key, bot] of entries){
+      const botRef = ref(db,`/bots/${key}`)
+      try{
+        await runTransaction(botRef, cur=>{
+          if(cur===null) return { name: bot.name || decodeURIComponent(key), ownerId: currentUser.uid, claimedAt: Date.now() }
+          if(!cur.ownerId){ cur.ownerId = currentUser.uid; cur.claimedAt = Date.now(); return cur }
+          return cur
+        })
+      }catch(e){ console.warn('tx failed',e) }
+    }
+    alert('Проверка завершена — статусы обновлены.')
+  }catch(e){
+    console.error('Ошибка получения списка ботов', e)
+    alert('Не удалось получить список ботов. Проверьте подключение к Firebase и правила безопасности.')
   }
-  alert('Проверка завершена — статусы обновлены.')
 })
 
 // My bots panel
